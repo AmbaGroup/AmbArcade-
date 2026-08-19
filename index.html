@@ -205,7 +205,7 @@ html,body{height:auto!important;min-height:100%!important;overflow-y:auto!import
    <button onclick="openPanel('leaderboardPanel')">📊<span>Leaderboard</span></button>
    <button onclick="openPanel('settingsPanel')">⚙️<span>Pengaturan</span></button>
   </footer>
-  <div class="version-line">AmbArcade • Online Prototype v28</div>
+  <div class="version-line">AmbArcade • Online Prototype v32 • IndexedDB</div>
  </div>
 </section>
 <section id="difficultyScreen" class="screen hidden">
@@ -375,9 +375,17 @@ const ACHIEVEMENTS=[
  {id:'variety',icon:'🎮',title:'Coba Semuanya',desc:'Menang di 3 game berbeda.',test:p=>Object.values(p.games).filter(x=>x.wins>0).length>=3,reward:150}
 ];
 const GAME_NAMES={puzzle:'Puzzle Angka',mines:'Minesweeper'};
-function storageGet(k){try{return window.localStorage?localStorage.getItem(k):null}catch(e){return null}}
-function storageSet(k,v){try{if(window.localStorage)localStorage.setItem(k,v);return true}catch(e){return false}}
-function storageRemove(k){try{if(window.localStorage)localStorage.removeItem(k)}catch(e){}}
+/* ---------- LOCAL STORAGE: IndexedDB ---------- */
+const IDB_NAME='AmbArcadeDB';
+const IDB_VERSION=1;
+const IDB_STORE='kv';
+let idb=null;
+const idbCache=new Map();
+function openIDB(){return new Promise((resolve,reject)=>{try{const req=indexedDB.open(IDB_NAME,IDB_VERSION);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(IDB_STORE))req.result.createObjectStore(IDB_STORE)};req.onsuccess=()=>{idb=req.result;resolve(idb)};req.onerror=()=>reject(req.error)}catch(e){reject(e)}})}
+async function initLocalDB(){try{await openIDB();const tx=idb.transaction(IDB_STORE,'readonly'),store=tx.objectStore(IDB_STORE);const req=store.openCursor();await new Promise((resolve,reject)=>{req.onsuccess=()=>{const c=req.result;if(c){idbCache.set(c.key,c.value);c.continue()}else resolve()};req.onerror=()=>reject(req.error)});return true}catch(e){console.warn('IndexedDB tidak tersedia:',e);return false}}
+function storageGet(k){return idbCache.has(k)?idbCache.get(k):null}
+function storageSet(k,v){idbCache.set(k,v);try{if(!idb)return false;const tx=idb.transaction(IDB_STORE,'readwrite');tx.objectStore(IDB_STORE).put(v,k);return true}catch(e){return false}}
+function storageRemove(k){idbCache.delete(k);try{if(idb){const tx=idb.transaction(IDB_STORE,'readwrite');tx.objectStore(IDB_STORE).delete(k)}}catch(e){}}
 
 let profileData={name:'Pak Andre Tampan',status:'Main santai, menang pasti.',avatar:0,level:1,xp:0,rp:0,wins:0,gamesPlayed:0,streak:0,bestStreak:0,recent:'',achievements:[],games:{}};
 let onlineClient=null,onlineUser=null,onlineReady=false,onlineSaveTimer=null;
@@ -549,9 +557,7 @@ playerName.addEventListener('keydown',e=>{if(!isFriday()){e.preventDefault();pla
 playerName.addEventListener('paste',e=>{if(!isFriday())e.preventDefault()});
 playerName.addEventListener('input',()=>{if(!isFriday()){playerName.value=profileData.name;return}profileData.name=playerName.value.trim()||profileData.name;saveProfile()});
 playerStatus.addEventListener('input',()=>{profileData.status=playerStatus.value;saveProfile()});
-loadOnlineConfig();
-loadProfile();
-setTimeout(()=>bootstrapGoogleAuth(),250);
+(async()=>{await initLocalDB();loadOnlineConfig();loadProfile();setTimeout(()=>bootstrapGoogleAuth(),250)})().catch(e=>{console.error(e);loadOnlineConfig();loadProfile();setTimeout(()=>bootstrapGoogleAuth(),250)});
 setInterval(updateNameLock,60000);
 
 /* ---------- LOBBY ---------- */
