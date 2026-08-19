@@ -134,11 +134,10 @@ html,body{height:auto!important;min-height:100%!important;overflow-y:auto!import
   <h1>Masuk ke AmbArcade</h1>
   <p>Login dengan akun Google kamu untuk menyimpan profil, EXP, saldo, statistik, dan leaderboard secara online.</p>
   <button id="googleLoginBtn" class="google-login" onclick="loginWithGoogle()"><span class="gmark">G</span> MASUK DENGAN GOOGLE</button>
-  <button class="action" style="width:100%;margin-top:10px" onclick="openOnlineSetupFromAuth()">⚙️ ATUR SUPABASE DULU</button>
   <div id="authLoading" class="auth-loading">Menghubungkan ke Google...</div>
   <div id="authError" class="auth-error"></div>
   <div class="auth-note">🔒 Login ditangani oleh Google & Supabase. AmbArcade tidak meminta password Google kamu.</div>
-  <div class="auth-debug">AmbArcade Online • Google Login Prototype v28</div>
+  <div class="auth-debug">AmbArcade Online • Google Login • OAuth Auto v30</div>
  </div>
 </section>
 <section id="nameSetup" class="name-setup hidden">
@@ -206,7 +205,7 @@ html,body{height:auto!important;min-height:100%!important;overflow-y:auto!import
    <button onclick="openPanel('leaderboardPanel')">📊<span>Leaderboard</span></button>
    <button onclick="openPanel('settingsPanel')">⚙️<span>Pengaturan</span></button>
   </footer>
-  <div class="version-line">AmbArcade • Online Prototype v28</div>
+  <div class="version-line">AmbArcade • Online Prototype v30</div>
  </div>
 </section>
 <section id="difficultyScreen" class="screen hidden">
@@ -272,14 +271,14 @@ html,body{height:auto!important;min-height:100%!important;overflow-y:auto!import
  <div class="panel-box"><button class="panel-close" onclick="closePanels()">×</button><h2>⚙️ Pengaturan</h2><label class="setting-line">Getar <input id="vibrateToggle" type="checkbox" checked></label><label class="setting-line">Simpan nama/status otomatis <input id="autosaveToggle" type="checkbox" checked></label><button class="action" style="margin-top:12px" onclick="openPanel('onlinePanel')">🌐 Atur AmbArcade Online</button><div class="coming-soon">VIP — tersedia di versi mendatang.</div></div>
 </section>
 <section id="onlinePanel" class="overlay-screen hidden">
- <div class="panel-box"><button class="panel-close" onclick="closePanels()">×</button><h2>🌐 AmbArcade Online</h2><p class="sub">Prototype penyimpanan profil dan leaderboard online.</p>
-  <div class="online-status" id="onlineStatus">Belum terhubung. Isi Project URL dan Publishable Key Supabase untuk mengaktifkan mode online.</div>
+ <div class="panel-box"><button class="panel-close" onclick="closePanels()">×</button><h2>🌐 AmbArcade Online</h2><p class="sub">Penyimpanan profil dan leaderboard online.</p>
+  <div class="online-status" id="onlineStatus">Konfigurasi online AmbArcade sudah terpasang otomatis.</div>
   <div class="online-config">
    <input id="supabaseUrlInput" placeholder="Supabase Project URL" autocomplete="off">
    <input id="supabaseKeyInput" placeholder="Supabase Publishable Key" autocomplete="off">
    <button onclick="connectOnline()">HUBUNGKAN ONLINE</button>
   </div>
-  <div class="coming-soon">🔒 Untuk prototype ini, jangan masukkan Secret/Service Role Key ke HTML.</div>
+  <div class="coming-soon">🔒 Konfigurasi publik tertanam otomatis. Secret/Service Role Key tidak digunakan di browser.</div>
  </div>
 </section>
 <section id="soonPanel" class="overlay-screen hidden">
@@ -383,21 +382,18 @@ function storageRemove(k){try{if(window.localStorage)localStorage.removeItem(k)}
 let profileData={name:'Pak Andre Tampan',status:'Main santai, menang pasti.',avatar:0,level:1,xp:0,rp:0,wins:0,gamesPlayed:0,streak:0,bestStreak:0,recent:'',achievements:[],games:{}};
 let onlineClient=null,onlineUser=null,onlineReady=false,onlineSaveTimer=null;
 const ONLINE_CONFIG_KEY='ambaracade_online_config_v1';
-function loadOnlineConfig(){try{const raw=storageGet(ONLINE_CONFIG_KEY);if(raw){const c=JSON.parse(raw);document.getElementById('supabaseUrlInput').value=c.url||'';document.getElementById('supabaseKeyInput').value=c.key||''}}catch(e){}}
+function loadOnlineConfig(){try{document.getElementById('supabaseUrlInput').value=SUPABASE_URL;document.getElementById('supabaseKeyInput').value=SUPABASE_PUBLISHABLE_KEY;storageSet(ONLINE_CONFIG_KEY,JSON.stringify({url:SUPABASE_URL,key:SUPABASE_PUBLISHABLE_KEY}));}catch(e){}}
 function setOnlineBadge(on,text){onlineBadge.classList.toggle('on',!!on);onlineBadgeText.textContent=text|| (on?'ONLINE':'OFFLINE')}
-function onlineConfigured(){return !!(document.getElementById('supabaseUrlInput').value.trim()&&document.getElementById('supabaseKeyInput').value.trim()&&window.supabase)}
+function onlineConfigured(){return !!(SUPABASE_URL&&SUPABASE_PUBLISHABLE_KEY&&window.supabase)}
 function showAuthError(msg){authError.textContent=msg||'Terjadi kesalahan.';authError.style.display='block';authLoading.style.display='none';googleLoginBtn.disabled=false;googleLoginBtn.style.opacity='1'}
 function setAuthBusy(busy){authLoading.style.display=busy?'block':'none';googleLoginBtn.disabled=busy;googleLoginBtn.style.opacity=busy?'.65':'1'}
 function showAuthGate(){authGate.classList.remove('hidden');lobby.classList.add('hidden');nameSetup.classList.add('hidden')}
 function hideAuthGate(){authGate.classList.add('hidden')}
-function openOnlineSetupFromAuth(){
- authGate.classList.add('hidden');
- openPanel('onlinePanel');
-}
+const SUPABASE_URL = "https://yodnrcyjaouyvzuixunt.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_r0Zhn8E18LF5IRp0W3ncGw_ubOF4Aqr";
 async function initOnlineClient(){
- const url=document.getElementById('supabaseUrlInput').value.trim(),key=document.getElementById('supabaseKeyInput').value.trim();
- if(!url||!key||!window.supabase)throw new Error('Konfigurasi Supabase belum tersedia.');
- if(!onlineClient) onlineClient=window.supabase.createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+ if(!window.supabase)throw new Error('Supabase library belum termuat.');
+ if(!onlineClient) onlineClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
  return onlineClient;
 }
 async function loginWithGoogle(){
@@ -421,24 +417,43 @@ async function connectOnline(){
   if(!data.session){onlineReady=false;setOnlineBadge(false,'OFFLINE');onlineStatus.textContent='Belum login Google. Kembali ke halaman masuk untuk login.';showAuthGate();return}
   if(data.session.user?.is_anonymous){await onlineClient.auth.signOut();onlineReady=false;setOnlineBadge(false,'OFFLINE');onlineStatus.textContent='Sesi anonim lama dihapus. Silakan login dengan Google.';showAuthGate();return}
   onlineUser=data.session.user;onlineReady=true;setOnlineBadge(true,'ONLINE');onlineStatus.textContent='Terhubung sebagai akun Google. Profil dapat disimpan ke database online.';
+  if(await resetCurrentAccountOnce())return;
   await pullOnlineProfile();await pushOnlineProfile();await loadLeaderboard();hideAuthGate();
   if(storageGet('ambaracade_name_setup_v1')==='1'){lobby.classList.remove('hidden')}else{nameSetup.classList.remove('hidden');setTimeout(()=>nameSetupInput.focus(),80)}
  }catch(e){onlineReady=false;setOnlineBadge(false,'OFFLINE');onlineStatus.textContent='Gagal terhubung: '+(e?.message||e);showAuthError(e?.message||e)}
 }
+async function resetCurrentAccountOnce(){
+ const resetKey='ambarcade_reset_my_account_v30';
+ if(storageGet(resetKey)==='1')return false;
+ try{
+  if(!onlineUser||!onlineClient)return false;
+  // Hanya hapus profil milik akun yang sedang login; tidak menyentuh akun pemain lain.
+  const {error}=await onlineClient.from('profiles').delete().eq('id',onlineUser.id);
+  if(error)throw error;
+  storageRemove('ambaracade_profile');
+  storageRemove('ambaracade_name_setup_v1');
+  storageSet(resetKey,'1');
+  await onlineClient.auth.signOut();
+  onlineUser=null;onlineReady=false;
+  setOnlineBadge(false,'OFFLINE');
+  showAuthGate();
+  authError.textContent='Data profil akun lama sudah direset. Silakan login Google lagi.';
+  authError.style.display='block';
+  return true;
+ }catch(e){
+  console.warn('Reset akun dilewati:',e?.message||e);
+  storageSet(resetKey,'1');
+  return false;
+ }
+}
 async function bootstrapGoogleAuth(){
  try{
-  if(!onlineConfigured()){
-   authGate.classList.add('hidden');
-   lobby.classList.remove('hidden');
-   nameSetup.classList.add('hidden');
-   openPanel('onlinePanel');
-   onlineStatus.textContent='Isi Project URL dan Publishable Key Supabase, lalu tekan HUBUNGKAN ONLINE.';
-   return;
-  }
   await initOnlineClient();
   const {data,error}=await onlineClient.auth.getSession();if(error)throw error;
   if(data.session?.user && !data.session.user.is_anonymous){
-   onlineUser=data.session.user;onlineReady=true;setOnlineBadge(true,'ONLINE');hideAuthGate();await pullOnlineProfile();await pushOnlineProfile();await loadLeaderboard();
+   onlineUser=data.session.user;onlineReady=true;setOnlineBadge(true,'ONLINE');
+   if(await resetCurrentAccountOnce())return;
+   hideAuthGate();await pullOnlineProfile();await pushOnlineProfile();await loadLeaderboard();
    if(storageGet('ambaracade_name_setup_v1')==='1'){lobby.classList.remove('hidden')}else{nameSetup.classList.remove('hidden');setTimeout(()=>nameSetupInput.focus(),80)}
    return;
   }
