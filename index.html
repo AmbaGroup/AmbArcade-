@@ -422,7 +422,14 @@ async function connectOnline(){
 }
 async function bootstrapGoogleAuth(){
  try{
-  if(!onlineConfigured()){showAuthError('Konfigurasi online belum tersedia. Buka Pengaturan → Atur AmbArcade Online untuk mengisi Project URL dan Publishable Key.');return}
+  if(!onlineConfigured()){
+   authGate.classList.add('hidden');
+   lobby.classList.remove('hidden');
+   nameSetup.classList.add('hidden');
+   openPanel('onlinePanel');
+   onlineStatus.textContent='Isi Project URL dan Publishable Key Supabase, lalu tekan HUBUNGKAN ONLINE.';
+   return;
+  }
   await initOnlineClient();
   const {data,error}=await onlineClient.auth.getSession();if(error)throw error;
   if(data.session?.user && !data.session.user.is_anonymous){
