@@ -134,6 +134,7 @@ html,body{height:auto!important;min-height:100%!important;overflow-y:auto!import
   <h1>Masuk ke AmbArcade</h1>
   <p>Login dengan akun Google kamu untuk menyimpan profil, EXP, saldo, statistik, dan leaderboard secara online.</p>
   <button id="googleLoginBtn" class="google-login" onclick="loginWithGoogle()"><span class="gmark">G</span> MASUK DENGAN GOOGLE</button>
+  <button class="action" style="width:100%;margin-top:10px" onclick="openOnlineSetupFromAuth()">⚙️ ATUR SUPABASE DULU</button>
   <div id="authLoading" class="auth-loading">Menghubungkan ke Google...</div>
   <div id="authError" class="auth-error"></div>
   <div class="auth-note">🔒 Login ditangani oleh Google & Supabase. AmbArcade tidak meminta password Google kamu.</div>
@@ -389,6 +390,10 @@ function showAuthError(msg){authError.textContent=msg||'Terjadi kesalahan.';auth
 function setAuthBusy(busy){authLoading.style.display=busy?'block':'none';googleLoginBtn.disabled=busy;googleLoginBtn.style.opacity=busy?'.65':'1'}
 function showAuthGate(){authGate.classList.remove('hidden');lobby.classList.add('hidden');nameSetup.classList.add('hidden')}
 function hideAuthGate(){authGate.classList.add('hidden')}
+function openOnlineSetupFromAuth(){
+ authGate.classList.add('hidden');
+ openPanel('onlinePanel');
+}
 async function initOnlineClient(){
  const url=document.getElementById('supabaseUrlInput').value.trim(),key=document.getElementById('supabaseKeyInput').value.trim();
  if(!url||!key||!window.supabase)throw new Error('Konfigurasi Supabase belum tersedia.');
